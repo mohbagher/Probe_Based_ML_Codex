@@ -1,0 +1,9 @@
+[project]
+name = "probe-based-ml-codex"
+version = "0.1.0"
+description = "Probe-based RIS control primitives grounded in analytical received-power models."
+readme = "README.md"
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 100
