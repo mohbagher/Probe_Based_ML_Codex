@@ -5,8 +5,7 @@ control experiments. The API focuses on:
 
 - selecting a fixed analytical model as a baseline,
 - defining a structured probe bank,
-- computing the oracle-normalized power ratio,
-- evaluating simple selector heuristics.
+- computing the oracle-normalized power ratio.
 
 ## Example
 
@@ -14,8 +13,6 @@ control experiments. The API focuses on:
 from probe_based_ml_codex.models import ReceivedPowerModel
 from probe_based_ml_codex.probes import StructuredOrthogonalProbeBank
 from probe_based_ml_codex.problem import ProbeSelectionProblem
-from probe_based_ml_codex.selectors import ThresholdSelector
-from probe_based_ml_codex.simulation import evaluate_selector
 
 model = ReceivedPowerModel.general_model(
     assumptions=(
@@ -30,12 +27,12 @@ probe_bank = StructuredOrthogonalProbeBank.from_codebook(
 )
 
 problem = ProbeSelectionProblem(model=model, probe_bank=probe_bank)
-selector = ThresholdSelector(threshold=0.9)
 received_powers = [0.8, 1.0, 0.7]
 
-ratio = problem.run_selector(selector, received_powers)
-print(f"Threshold selector ratio: {ratio:.3f}")
+oracle_ratio = problem.evaluate_selection(
+    selected_index=problem.select_best_probe(received_powers),
+    received_powers=received_powers,
+)
 
-batch_result = evaluate_selector(problem, selector, [received_powers])
-print(f"Mean ratio: {batch_result.mean_ratio:.3f}")
+print(f"Oracle ratio: {oracle_ratio:.3f}")
 ```
