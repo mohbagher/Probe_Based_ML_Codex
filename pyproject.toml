@@ -4,14 +4,6 @@ version = "0.1.0"
 description = "Probe-based RIS control primitives grounded in analytical received-power models."
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["matplotlib", "numpy"]
-
-[project.optional-dependencies]
-dev = ["pytest"]
-
-[tool.pytest.ini_options]
-addopts = "-ra"
-testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
