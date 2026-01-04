@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 from .metrics import power_ratio
@@ -61,23 +62,11 @@ def _ensure_dir(path: Path) -> Path:
     return path
 
 
-def _require_matplotlib():
-    try:
-        import matplotlib.pyplot as plt  # type: ignore
-    except ModuleNotFoundError as exc:  # pragma: no cover - runtime guard
-        raise ModuleNotFoundError(
-            "matplotlib is required to generate plots. "
-            "Install with `pip install matplotlib`."
-        ) from exc
-    return plt
-
-
 def _save_text(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
 def plot_phase_heatmap(phases: np.ndarray, out_path: Path, title: str) -> None:
-    plt = _require_matplotlib()
     plt.figure(figsize=(8, 4))
     plt.imshow(phases, aspect="auto", cmap="twilight")
     plt.colorbar(label="Phase (rad)")
@@ -90,7 +79,6 @@ def plot_phase_heatmap(phases: np.ndarray, out_path: Path, title: str) -> None:
 
 
 def plot_phase_histogram(phases: np.ndarray, out_path: Path, title: str) -> None:
-    plt = _require_matplotlib()
     plt.figure(figsize=(6, 4))
     plt.hist(phases.flatten(), bins=30, color="#4c78a8")
     plt.title(title)
@@ -102,7 +90,6 @@ def plot_phase_histogram(phases: np.ndarray, out_path: Path, title: str) -> None
 
 
 def plot_distribution(values: np.ndarray, out_path: Path, title: str, xlabel: str) -> None:
-    plt = _require_matplotlib()
     plt.figure(figsize=(6, 4))
     plt.hist(values, bins=30, color="#54a24b")
     plt.title(title)
@@ -155,19 +142,6 @@ def _cosine_similarity_scores(
     return weighted / np.sum(weights, axis=1)
 
 
-def _ml_linear_baseline(
-    phases: np.ndarray,
-    observed_idx: Sequence[int],
-    observed_powers: Sequence[float],
-) -> int:
-    features = np.concatenate([np.cos(phases), np.sin(phases)], axis=1)
-    observed_features = features[np.array(observed_idx)]
-    targets = np.array(observed_powers)
-    weights, *_ = np.linalg.lstsq(observed_features, targets, rcond=None)
-    predictions = features @ weights
-    return int(np.argmax(predictions))
-
-
 def evaluate_baselines(
     phases: np.ndarray,
     m_observed: int,
@@ -183,14 +157,12 @@ def evaluate_baselines(
 
     similarity_scores = _cosine_similarity_scores(phases, observed_idx, observed_powers)
     similarity_idx = int(np.argmax(similarity_scores))
-    ml_idx = _ml_linear_baseline(phases, observed_idx, observed_powers)
 
     return {
         "random_full": power_ratio(powers[random_full_idx], oracle_power),
         "random_subset_best": power_ratio(powers[best_observed_idx], oracle_power),
         "best_observed": power_ratio(powers[best_observed_idx], oracle_power),
         "similarity_baseline": power_ratio(powers[similarity_idx], oracle_power),
-        "ml_linear": power_ratio(powers[ml_idx], oracle_power),
     }
 
 
@@ -269,7 +241,6 @@ def run_task_b1(result_dir: Path, config: ExperimentConfig, bank: ProbeBankResul
     rng = np.random.default_rng(config.seed)
     mean_values, median_values = _eta_vs_m(bank.phases, config.m_observed, config.n_trials, rng)
 
-    plt = _require_matplotlib()
     plt.figure(figsize=(6, 4))
     plt.plot(config.m_observed, mean_values, marker="o", label="Mean eta")
     plt.plot(config.m_observed, median_values, marker="s", label="Median eta")
@@ -300,7 +271,6 @@ def run_task_b2(result_dir: Path, config: ExperimentConfig, bank: ProbeBankResul
             if top_m <= len(sorted_powers):
                 top_values[top_m].append(sorted_powers[top_m - 1] / sorted_powers[0])
 
-    plt = _require_matplotlib()
     plt.figure(figsize=(6, 4))
     means = []
     for top_m, values in top_values.items():
@@ -332,7 +302,6 @@ def run_task_b3(result_dir: Path, config: ExperimentConfig, bank: ProbeBankResul
             "random_subset_best": [],
             "best_observed": [],
             "similarity_baseline": [],
-            "ml_linear": [],
         }
         for _ in range(config.n_trials):
             baselines = evaluate_baselines(bank.phases, m, rng)
@@ -340,7 +309,6 @@ def run_task_b3(result_dir: Path, config: ExperimentConfig, bank: ProbeBankResul
                 baseline_samples[key].append(baselines[key])
 
         means = {key: float(np.mean(vals)) for key, vals in baseline_samples.items()}
-        plt = _require_matplotlib()
         plt.figure(figsize=(7, 4))
         plt.bar(means.keys(), means.values(), color="#4c78a8")
         plt.xticks(rotation=45, ha="right")
@@ -373,7 +341,6 @@ def run_all_tasks(result_dir: Path, config: ExperimentConfig) -> None:
         run_task_b3(result_dir, config, bank)
 
     compare_dir = _ensure_dir(result_dir / "compare")
-    plt = _require_matplotlib()
     plt.figure(figsize=(6, 4))
     for bank in banks:
         rng = np.random.default_rng(config.seed)
